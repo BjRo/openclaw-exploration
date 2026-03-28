@@ -8,6 +8,7 @@ Written for developers approaching the codebase for the first time.
 | Document | What it covers |
 |---|---|
 | [System Architecture](system-architecture.md) | Core components, message pipeline, gateway, agent runtime, provider layer |
+| [Context and Memory](context-and-memory.md) | Context window management, transcript compaction, long-term memory, embeddings, retrieval |
 | [Plugin System](plugin-system.md) | Extension lifecycle, SDK surface, extension points, plugin authoring model |
 | [Development Process](development-process.md) | AI-assisted development (self-dogfooding), CI/CD, testing, release workflow |
 

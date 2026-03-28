@@ -323,7 +323,7 @@ registers:
 Every provider exports a **stream function** with a uniform signature:
 
 ```
-(messages, tools, modelId, config) → AsyncIterable<ModelStreamEvent>
+(messages, tools, modelId, config) -> AsyncIterable<ModelStreamEvent>
 ```
 
 This abstraction lets the `SessionManager` call any provider identically. The stream
@@ -351,38 +351,8 @@ Deepseek, Mistral, Moonshot, LiteLLM, and many more — all via the extension sy
 
 ## Session and Transcript Management
 
-**Location:** `src/config/sessions/`, `src/sessions/`
-
-### Transcript Persistence
-
-Each conversation is stored as a JSONL file — one JSON object per message/event. The
-session key (derived from agent + account + peer) determines which file to use.
-
-Session metadata includes:
-
-| Field | Purpose |
-|---|---|
-| `sessionId` | Unique identifier |
-| `channel` | Originating channel |
-| `origin` | Provider, account, thread context |
-| `model` | Current model override (if any) |
-| `thinkingLevel` | Extended thinking configuration (`off`, `low`, `high`, `xhigh`) |
-| `spawnedBy` | Parent session (for subagent hierarchies) |
-| `childSessions` | Spawned subagent sessions |
-
-### Context Management
-
-Conversations can grow beyond model context windows. OpenClaw handles this through:
-
-- **History limiting** — Per-channel DM history caps and token-aware truncation
-- **Transcript compaction** — Automatic lossy summarization of old messages via hooks (preserving timestamps and call hierarchy)
-- **Bootstrap context** — Essential context is re-injected at the start of compacted transcripts
-
-### Subagent Sessions
-
-A parent agent can spawn child subagent sessions (via `session-subagent-reactivation.ts`).
-Each child gets its own model, tools, and workspace, with results bubbling back to the
-parent via internal event messages. This enables divide-and-conquer workflows.
+For a detailed treatment of session persistence, context window management, compaction,
+and long-term memory, see **[Context and Memory](context-and-memory.md)**.
 
 ---
 
@@ -434,16 +404,3 @@ The `src/infra/` directory (440+ files) provides the platform substrate:
 | `src/context-engine/` | Context injection for agents |
 | `src/flows/` | Workflow/automation engine |
 | `src/terminal/`, `src/tui/` | Terminal UI components (tables, progress, prompts) |
-
-### Configuration
-
-OpenClaw uses YAML configuration files for nearly everything:
-
-- Model defaults and overrides
-- Channel connections (tokens, phone numbers, etc.)
-- Agent definitions and bindings
-- Plugin enablement and configuration
-- Security policies (allowlists, tool policies)
-
-Configuration is loaded once at gateway startup and can be reloaded for some channels
-without restart.

@@ -166,9 +166,6 @@ Add a messaging platform integration. A channel plugin implements:
 - **Threading:** Reply mode, thread support
 - **Pairing:** Device approval notifications
 
-Examples: Discord, Slack, Telegram, Matrix, iMessage, Signal, WhatsApp, MS Teams, Zalo,
-voice-call.
-
 #### Providers
 
 Add an LLM inference backend. A provider plugin implements:
@@ -176,8 +173,6 @@ Add an LLM inference backend. A provider plugin implements:
 - **Model catalog:** Available models with capabilities (vision, tools, context window)
 - **Stream function:** The `StreamFn` that handles actual inference
 - **Model resolution:** Dynamic model ID normalization and fallback
-
-Examples: Anthropic, OpenAI, Google, Ollama, OpenRouter, Together AI, xAI, Deepseek.
 
 #### Tools
 
@@ -207,47 +202,21 @@ React to lifecycle events in the message pipeline. Available hook points:
 
 Multiple plugins can register the same hook (ordered by priority).
 
-#### Speech Providers
+#### Other Extension Points
 
-Text-to-speech and speech-to-text capabilities. Implement `synthesize()` for TTS and
-optionally `listVoices()` for voice enumeration.
-
-#### Media Understanding Providers
-
-Image, audio, and video analysis. Register a `understand()` function that takes media
-input and returns structured analysis.
-
-#### Image Generation Providers
-
-Text-to-image capabilities. Register `generate()` and `validateParams()` functions.
-
-#### Web Search Providers
-
-Search engine integration. Register a `createTool()` factory that returns a
-search-capable tool.
-
-#### Commands
-
-Direct command handlers that bypass the LLM entirely. Useful for quick actions like
-status checks or configuration changes.
-
-#### HTTP Routes
-
-Custom HTTP endpoints on the gateway server. Useful for webhooks, health checks, or
-custom APIs.
-
-#### Services
-
-Long-running background processes with `start()` / `stop()` lifecycle methods.
-
-#### CLI Commands
-
-Custom subcommands added to the `openclaw` CLI.
-
-#### Context Engines and Memory
-
-Memory and context management: embedding providers, prompt sections, flush plans, and
-runtime adapters for persistent memory.
+| Extension point | Purpose |
+|---|---|
+| **Speech providers** | TTS/STT (synthesize, list voices) |
+| **Media understanding** | Image/audio/video analysis |
+| **Image generation** | Text-to-image |
+| **Web search** | Search engine integration |
+| **Commands** | Direct handlers that bypass the LLM |
+| **HTTP routes** | Custom endpoints on the gateway |
+| **Services** | Long-running background processes |
+| **CLI commands** | Custom `openclaw` subcommands |
+| **Context engines** | Custom context management strategies |
+| **Memory** | Prompt sections, flush plans, runtimes, embedding providers |
+| **Interactive handlers** | Platform-specific button/interaction handling |
 
 ---
 
@@ -268,26 +237,26 @@ type OpenClawPluginApi = {
   // Identity
   id: string;
   name: string;
-  version?: string;
-  source: string;
   registrationMode: "full" | "setup-only" | "setup-runtime";
 
   // Configuration
   config: OpenClawConfig;
   pluginConfig?: Record<string, unknown>;
 
-  // Runtime access (trusted surface)
+  // Runtime access (trusted surface for bundled plugins)
   runtime: PluginRuntime;
 
   // Logging
   logger: PluginLogger;
 
-  // Registration methods (all extension points above)
-  registerChannel: (...) => void;
-  registerProvider: (...) => void;
-  registerTool: (...) => void;
-  registerHook: (...) => void;
-  // ... and all others listed in the extension points catalog
+  // Registration methods
+  registerChannel, registerProvider, registerTool, registerHook,
+  registerSpeechProvider, registerMediaUnderstandingProvider,
+  registerImageGenerationProvider, registerWebSearchProvider,
+  registerCommand, registerHttpRoute, registerService, registerCli,
+  registerCliBackend, registerContextEngine, registerMemoryPromptSection,
+  registerMemoryFlushPlan, registerMemoryRuntime,
+  registerMemoryEmbeddingProvider, registerInteractiveHandler, ...
 };
 ```
 
@@ -306,8 +275,6 @@ Trusted in-process access to core services (available to bundled plugins):
 | `runtime.modelAuth` | Model auth resolution |
 
 ### Entry Helpers
-
-The SDK provides three entry helpers for defining plugins:
 
 ```typescript
 // General plugin (providers, tools, services, etc.)
@@ -339,42 +306,9 @@ extensions/discord/
     subagent-hooks.ts       # Hook registration
 ```
 
-The `package.json` `openclaw` field declares:
-
-```json
-{
-  "openclaw": {
-    "extensions": ["./index.ts"],
-    "setupEntry": "./setup-entry.ts",
-    "channel": {
-      "id": "discord",
-      "label": "Discord",
-      "docsPath": "/channels/discord"
-    },
-    "install": {
-      "npmSpec": "@openclaw/discord",
-      "minHostVersion": ">=2026.3.27"
-    }
-  }
-}
-```
-
-The `index.ts` wires everything together:
-
-```typescript
-import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
-import { discordPlugin } from "./src/channel.js";
-import { setDiscordRuntime } from "./src/runtime.js";
-import { registerDiscordSubagentHooks } from "./src/subagent-hooks.js";
-
-export default defineChannelPluginEntry({
-  id: "discord",
-  name: "Discord",
-  plugin: discordPlugin,
-  setRuntime: setDiscordRuntime,
-  registerFull: registerDiscordSubagentHooks,
-});
-```
+The `package.json` `openclaw` field declares metadata, entry points, and install
+requirements. The `index.ts` wires together the channel plugin, runtime setter, and
+additional hook registrations via `defineChannelPluginEntry()`.
 
 ---
 
@@ -401,4 +335,3 @@ plugins interact only through the public SDK surface.
 | **Manifest pre-load** | Metadata available without loading plugin code |
 | **Two-mode channels** | Inactive channels load only their setup code |
 | **Lazy runtime** | Only the subsystems a plugin uses are loaded |
-| **Static metadata** | Auth choices, env vars, and capabilities available without runtime |
