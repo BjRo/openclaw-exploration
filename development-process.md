@@ -1,9 +1,12 @@
 # Development Process
 
-OpenClaw is developed with significant **self-dogfooding** — AI agents (specifically
-Claude Code) are an integral part of the development workflow. The repo ships with custom
-agent skills, an agent-targeted instruction file (`CLAUDE.md`), and automation that
-treats AI-assisted development as a first-class concern.
+OpenClaw is developed with significant **self-dogfooding** — AI coding agents are an
+integral part of the development workflow. The repo is set up for **dual-agent
+development** using both **OpenAI Codex CLI** and **Claude Code**, with Codex appearing
+to be the primary tool for PR review and landing workflows, and Claude Code used
+alongside it for development tasks. The repo ships with custom agent skills, instruction
+files for both tools (`CLAUDE.md`/`AGENTS.md`), and automation that treats AI-assisted
+development as a first-class concern.
 
 In addition to self-dogfooding, the core agent runtime is powered by an external library
 (`@mariozechner/pi-coding-agent`), which provides the inference loop and session
@@ -13,12 +16,16 @@ management that OpenClaw orchestrates.
 
 ```mermaid
 graph TD
-    Dev["Developer"] --> CC["Claude Code<br/>(AI Coding Agent)"]
+    Dev["Developer"] --> Codex["Codex CLI<br/>(OpenAI)"]
+    Dev --> CC["Claude Code<br/>(Anthropic)"]
     Dev --> Manual["Manual Development"]
 
-    CC --> CLAUDE["CLAUDE.md<br/>Agent Instructions"]
+    Codex --> AGENTS["AGENTS.md / CLAUDE.md<br/>Agent Instructions"]
+    Codex --> CodexPrompts["~/.codex/prompts/<br/>landpr.md, etc."]
+    CC --> AGENTS
     CC --> Skills[".agents/skills/<br/>Agent Skill Definitions"]
-    CC --> Committer["scripts/committer<br/>Scoped Commits"]
+    Codex --> Committer["scripts/committer<br/>Scoped Commits"]
+    CC --> Committer
 
     Manual --> Committer
     Manual --> PreCommit["Pre-commit Hooks<br/>(prek)"]
@@ -38,12 +45,28 @@ graph TD
 
 ---
 
-## Self-Dogfooding: AI-Assisted Development
+## Self-Dogfooding: Dual-Agent Development
 
-### CLAUDE.md — The Agent Constitution
+### Two AI Coding Agents
 
-The repo's `CLAUDE.md` (269 lines) serves as the canonical instruction set for any AI
-agent working in the codebase. It is automatically loaded by Claude Code and defines:
+The development workflow uses both major AI coding agents:
+
+| Tool | Primary use | Config location |
+|---|---|---|
+| **Codex CLI** (OpenAI) | PR review (`codex review`), PR landing (`/landpr`), parallel batch work | `~/.codex/prompts/`, `~/.codex/config.toml` |
+| **Claude Code** (Anthropic) | Development tasks, agent skills, codebase exploration | `CLAUDE.md`, `.agents/skills/` |
+
+CONTRIBUTING.md explicitly states: *"run `codex review --base origin/main` locally
+before opening your PR. Treat this as the current highest standard of AI review."*
+
+A cost tracking tool (`codexbar`) monitors usage and spend across both providers by
+reading session logs from `~/.codex/sessions/` and `~/.claude/projects/`.
+
+### CLAUDE.md / AGENTS.md — The Agent Constitution
+
+The repo's `CLAUDE.md` (269 lines, symlinked from `AGENTS.md`) serves as the canonical
+instruction set for any AI agent working in the codebase. Both Claude Code and Codex
+read it. It defines:
 
 | Section | What it governs |
 |---|---|
@@ -102,8 +125,10 @@ The development loop:
 5. CI runs dynamic scope detection and parallel verification
 6. On merge, the Release Maintainer skill handles version bumps and publishing
 
-The AI agent and human developers share the same tooling, verification gates, and
-commit workflow.
+The AI agents and human developers share the same tooling, verification gates, and
+commit workflow. The `coding-agent` skill (`skills/coding-agent/SKILL.md`) even defines
+patterns for spawning multiple Codex processes in parallel for batch work like reviewing
+multiple PRs simultaneously.
 
 ---
 
@@ -254,5 +279,6 @@ graph LR
 
 The defining characteristic is that **AI agents and human developers share the same
 workflow** — same `scripts/committer`, same hooks, same CI gates, same review standards.
-`CLAUDE.md` ensures consistency. Agent skills automate the repetitive parts while keeping
-humans in the loop for approval-gated actions.
+`CLAUDE.md`/`AGENTS.md` ensures consistency across both Codex and Claude Code. Agent
+skills automate the repetitive parts while keeping humans in the loop for
+approval-gated actions.
